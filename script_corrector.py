@@ -158,22 +158,27 @@ def sim_err(pstr, map):
 
 # Create all cases in which one is the user really want to write
 # Here we use string
-def rep_set(pstr):
+def rep_set_cr(pstr):
     com_set = char_com(pstr)
+    map = com_set
     org = com_set[-1]
     del com_set[-1]
     print 'The number of combination set: ', len(com_set)
-    all_ver = []
+    all_cr = []
     map = {}
+    all_map = []
     start_time = time.time()
     for iset in com_set:
+        #Todo: write this for line as a function
         new_pstr = copy.deepcopy(pstr)
         map.update(zip(org, iset))
         new_map = {ord(k): ord(v[0]) for k, v in map.items()} # Todo: I should use v instead of v[0]
+        all_map.append(new_map)
         new_pstr = new_pstr.translate(new_map)
-        all_ver.append(new_pstr)
+        cr = correct_ratio(new_pstr.split())
+        all_cr.append(cr)
     print("--- new set generation time: %s seconds ---" % (time.time() - start_time))
-    return all_ver
+    return all_map, all_cr
 
 # Char gradient part
 # # Todo: If you don't use this function, pls del. it.
@@ -181,6 +186,7 @@ def rep_set(pstr):
 #    return  pstr.replace(ff, '#' + tt)
 
 # Todo: character gradient descent is very simple
+# Todo: collections.OrderedDict([('A','C'),('C','B')]), ordinary dict may have order problem
 def char_grad(pstr, map):
     cr = correct_ratio(pstr.split())
     print 'Original correct ratio: %f' % cr
@@ -197,7 +203,7 @@ def char_grad(pstr, map):
         for rc in mlist:
             if rc == key:
                 continue
-            print key, rc
+            #print key, rc
             new_plist = copy.deepcopy(plist)
             new_flag = copy.deepcopy(flag)
             for ind, char in enumerate(new_plist):
@@ -207,13 +213,13 @@ def char_grad(pstr, map):
             new_pstr = "".join(new_plist)
             #print ': ' + new_pstr
             new_cr = correct_ratio(new_pstr.split())
-            print 'New generated correct ratio: %f' % new_cr
+            #print 'New generated correct ratio: %f' % new_cr
             if new_cr >= cr:
-                print 'Yes, I am big'
+                #print 'Yes, I am big'
                 plist = new_plist
                 flag = new_flag
                 cr = new_cr
-        print 'Current correct ratio is: %f' % cr
+        #print 'Current correct ratio is: %f' % cr
     print '-'*10
     print 'Final correct ratio is: %f' % cr
     #do some calculation
@@ -309,7 +315,7 @@ def get_orginal_data(dir = '', str = '', map = None):
 def create_test_data(pstr):
     # Start
     pflag = True
-    #pflag = False
+    pflag = False
     map = sim_user_bhv_normal(re_char_map, 1)
     print 'Hard level: ', map_hard_level(map[0])
     if pflag:
@@ -323,8 +329,8 @@ def create_test_data(pstr):
     new_pstr = pre_process(sim_err(pstr, map[0]))
     if pflag:
         print 'After DC2SC preprocess:  %s' % new_pstr
-    print "Initial similar ratio: ", eval(new_pstr, pstr)
     print "Initial correct ratio: ", correct_ratio(new_pstr.split())
+    print "Initial similar ratio: ", eval(new_pstr, pstr)
     return new_pstr
 
 ########### Test part ####################
@@ -332,24 +338,29 @@ def create_test_data(pstr):
 
 def test1(pstr, fpstr):
     pflag = True
-    rl  = [] # correct ratio
-    new_pstr_list = rep_set(fpstr)
-    # check with dictionary
-    start_time = time.time()
-    for i in new_pstr_list:
-        cr = correct_ratio(i.split())
-        #print i, cr
-        rl.append(cr)
-    print("--- correct ratio testing cost %s seconds ---" % (time.time() - start_time))
+    pflag = False
+    #rl  = [] # correct ratio
+    #map = []
+    #rl = []
+    (map, rl) = rep_set_cr(fpstr)
+    #new_pstr_list = rep_set(fpstr)
+    # # check with dictionary
+    # start_time = time.time()
+    # for i in new_pstr_list:
+    #     cr = correct_ratio(i.split())
+    #     #print i, cr
+    #     rl.append(cr)
+    # print("--- correct ratio testing cost %s seconds ---" % (time.time() - start_time))
     # Find the biggest one
     max_v = max(rl)
     print 'the correct ratio according to dict %f' % max_v
     max_list = [i for i, j in enumerate(rl) if j == max_v]
     for i in max_list:
+        new_pstr = pstr.translate(map[i])
         if pflag:
-            print new_pstr_list[i]
+            print new_pstr
             print pstr
-        print 'After correction the similarity with original: %f' % (eval(new_pstr_list[i], pstr))
+        print 'After correction the similarity with original: %f' % (eval(new_pstr, pstr))
         print '-'*10
     #Todo: here we will implement Ngram-method
     #print len(rl)
@@ -385,7 +396,7 @@ def test2(new_pstr):
 #pstr = create_test_data(dir = 'data/test_data/test2_tug.txt')
 pstr = '' # original
 fpstr = '' # false
-pstr = get_orginal_data(dir = 'data/test.txt')
+pstr = get_orginal_data(dir = 'data/ug_text_new/correct_data/CTS/nhl5.txt')
 fpstr = create_test_data(pstr)
 # test with files
 print '-' * 50
@@ -393,8 +404,15 @@ print '[info] checking list 1: ' ,check_maps(char_map, re_char_map)
 print '[info] checking list 2: ' ,check_maps(re_char_map, char_map)
 print '=' * 50
 print 'Character brute-force'
+start_time = time.time()
+# Find the biggest one
 test1(pstr, fpstr)
-sys.exit()
+print("BF time: %s" % (time.time() - start_time))
+#sys.exit()
 print '='*50
 print 'Character gradient descent:'
-test2(pstr)
+start_time = time.time()
+test2(fpstr)
+print("CGD time: %s" % (time.time() - start_time))
+#print 'original:'
+#print pstr
